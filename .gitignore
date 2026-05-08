@@ -1,0 +1,8 @@
+# Ignore everything except the viewer
+*
+!.gitignore
+!index.html
+!range_compare.html
+!species_index.json
+!species_data/
+!species_data/**

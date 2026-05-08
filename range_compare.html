@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BirdLife vs S&T Range Comparison</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #1a3a5c;
+    --teal:    #1a6e7e;
+    --gold:    #d48f0c;
+    --orange:  #c06a10;
+    --overlap: #2a9d5c;   /* green — clearly distinct from navy + orange */
+    --slate:   #4a5f72;
+    --lgray:   #d0d8e0;
+    --offwhite:#f4f6f8;
+    --white:   #ffffff;
+    --text:    #1c2b38;
+    --red:     #c0392b;
+    --green:   #1e7e44;
+  }
+
+  body { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 13px;
+         color: var(--text); display: flex; flex-direction: column; height: 100vh;
+         background: var(--offwhite); overflow: hidden; }
+
+  /* ── Header ─────────────────────────────────────────────────────────── */
+  #header {
+    height: 50px; background: var(--navy); color: white;
+    display: flex; align-items: center; padding: 0 14px; gap: 14px;
+    flex-shrink: 0; z-index: 1000;
+  }
+  #header h1 { font-size: 15px; font-weight: 700; white-space: nowrap; }
+  #search-wrap { position: relative; flex: 1; max-width: 360px; }
+  #search {
+    width: 100%; padding: 7px 10px; border-radius: 6px; border: none;
+    font-size: 13px; background: rgba(255,255,255,0.15); color: white;
+    outline: none;
+  }
+  #search::placeholder { color: rgba(255,255,255,0.55); }
+  #search:focus { background: rgba(255,255,255,0.22); }
+  #search-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: white; border: 1px solid var(--lgray); border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); max-height: 320px;
+    overflow-y: auto; z-index: 2000; display: none;
+  }
+  .search-item {
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--offwhite);
+  }
+  .search-item:hover { background: var(--offwhite); }
+  .search-item .sname { font-weight: 700; color: var(--navy); }
+  .search-item .ssci  { font-size: 11px; color: var(--slate); font-style: italic; }
+  .search-item .sfam  { font-size: 11px; color: var(--teal); }
+
+  #header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .season-btn {
+    padding: 5px 12px; border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.4);
+    background: transparent; color: white; cursor: pointer; font-size: 12px;
+    transition: all 0.15s;
+  }
+  .season-btn.active { background: var(--teal); border-color: var(--teal); }
+  .season-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+  /* ── Main layout ─────────────────────────────────────────────────────── */
+  #main { flex: 1; display: flex; overflow: hidden; }
+
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
+  #sidebar {
+    width: 310px; flex-shrink: 0; background: var(--offwhite);
+    overflow-y: auto; border-right: 1px solid var(--lgray);
+    display: flex; flex-direction: column;
+  }
+
+  #welcome {
+    padding: 20px 16px; color: var(--slate); line-height: 1.6;
+  }
+  #welcome h2 { font-size: 14px; color: var(--navy); margin-bottom: 8px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px; margin: 5px 0;
+  }
+  .legend-swatch {
+    width: 18px; height: 18px; border-radius: 3px; flex-shrink: 0;
+  }
+
+  #species-panel { display: none; padding: 0; }
+
+  /* Species header */
+  #sp-header {
+    background: var(--navy); color: white; padding: 12px 14px;
+  }
+  #sp-common { font-size: 16px; font-weight: 700; line-height: 1.2; }
+  #sp-sci    { font-size: 11px; font-style: italic; color: var(--lgray); margin-top: 2px; }
+  #sp-family { font-size: 11px; color: var(--gold); margin-top: 2px; }
+  #tax-flag  {
+    display: none; margin-top: 6px; background: #7a3a00;
+    border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #ffd580;
+  }
+
+  /* Stats cards */
+  .section { padding: 10px 14px; border-bottom: 1px solid var(--lgray); }
+  .section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--slate); margin-bottom: 8px;
+  }
+
+  /* Nonoverlap bars */
+  .season-row { margin: 5px 0; }
+  .season-label { display: flex; justify-content: space-between;
+                  font-size: 12px; margin-bottom: 2px; }
+  .season-label span:first-child { color: var(--slate); }
+  .season-label strong { color: var(--teal); }
+  .bar-track { background: var(--lgray); border-radius: 3px; height: 8px; }
+  .bar-fill  { background: var(--teal); border-radius: 3px; height: 8px;
+               transition: width 0.4s ease; }
+
+  /* Cell counts table */
+  .counts-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .count-card {
+    background: white; border-radius: 5px; padding: 6px 8px;
+    border: 1px solid var(--lgray);
+  }
+  .count-val  { font-size: 15px; font-weight: 700; color: var(--navy); }
+  .count-lbl  { font-size: 10px; color: var(--slate); margin-top: 1px; }
+  .count-card.st  .count-val { color: var(--orange); }
+  .count-card.bl  .count-val { color: var(--navy); }
+  .count-card.ov  .count-val { color: var(--overlap); }
+
+  /* Model outputs */
+  .model-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid var(--offwhite);
+    font-size: 12px;
+  }
+  .model-row:last-child { border-bottom: none; }
+  .model-lbl { color: var(--slate); }
+  .model-val { font-weight: 700; color: var(--navy); }
+  .model-val.high { color: var(--red); }
+  .model-val.med  { color: var(--orange); }
+  .model-val.low  { color: var(--green); }
+
+  /* Metadata chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    padding: 3px 8px; border-radius: 12px; font-size: 11px;
+    background: white; border: 1px solid var(--lgray); color: var(--slate);
+  }
+  .chip.iucn-lc  { background: #e8f5ea; color: #1e7e44; border-color: #b8ddbf; }
+  .chip.iucn-nt  { background: #fff3cd; color: #856404; border-color: #ffd970; }
+  .chip.iucn-en  { background: #fde8e8; color: #c0392b; border-color: #f5c6cb; }
+
+  /* ── Map ─────────────────────────────────────────────────────────────── */
+  #map { flex: 1; }
+
+  /* ── View toggle ─────────────────────────────────────────────────────── */
+  #view-control {
+    position: absolute; bottom: 24px; right: 14px; z-index: 999;
+    background: rgba(255,255,255,0.92); border: 1px solid var(--lgray);
+    border-radius: 8px; padding: 10px 14px; font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  #view-control .leg-title { font-weight: 700; color: var(--navy); margin-bottom: 8px; font-size: 11px; }
+  .leg-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .leg-box { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+  .view-sep { border: none; border-top: 1px solid var(--lgray); margin: 8px 0; }
+  .view-btn-group { display: flex; flex-direction: column; gap: 4px; }
+  .view-btn {
+    padding: 5px 10px; border-radius: 5px; border: 1.5px solid var(--lgray);
+    background: white; color: var(--slate); cursor: pointer; font-size: 11px;
+    text-align: left; transition: all 0.15s; white-space: nowrap;
+  }
+  .view-btn.active { border-color: var(--navy); background: var(--navy); color: white; font-weight: 700; }
+  .view-btn:hover:not(.active) { background: var(--offwhite); border-color: var(--slate); }
+
+  /* ── Loading spinner ─────────────────────────────────────────────────── */
+  #loading {
+    display: none; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); z-index: 2000;
+    background: rgba(255,255,255,0.9); border-radius: 8px;
+    padding: 16px 24px; font-size: 13px; color: var(--navy);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <h1>BirdLife vs S&amp;T — Range Comparison</h1>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search species by name…" autocomplete="off"/>
+    <div id="search-dropdown"></div>
+  </div>
+  <div id="header-right">
+    <button class="season-btn active" data-season="breeding">Breeding</button>
+    <button class="season-btn" data-season="migration">Migration</button>
+    <button class="season-btn" data-season="nonbreeding">Nonbreeding</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+
+    <!-- Welcome / legend shown before a species is selected -->
+    <div id="welcome">
+      <h2>Range Comparison Viewer</h2>
+      <p style="margin-bottom:12px">Search for a species above to display its BirdLife polygon
+      and eBird S&amp;T range on the map, coloured by agreement.</p>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#2a9d5c"></div>
+        <span><strong>Overlap</strong> — both datasets agree</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#c06a10"></div>
+        <span><strong>S&amp;T only</strong> — eBird models range here, BirdLife does not</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#1a3a5c"></div>
+        <span><strong>BirdLife only</strong> — BirdLife maps range here, S&amp;T does not</span>
+      </div>
+      <p style="margin-top:14px;font-size:11px;color:var(--slate)">
+        H3 resolution 5 hexagons (~28 km). Run
+        <code style="background:#e8edf2;padding:1px 4px;border-radius:3px">build_species_geojson.py</code>
+        to pre-generate species data files.
+      </p>
+    </div>
+
+    <!-- Species detail panel -->
+    <div id="species-panel">
+      <div id="sp-header">
+        <div id="sp-common">—</div>
+        <div id="sp-sci"></div>
+        <div id="sp-family"></div>
+        <div id="tax-flag">⚠ Taxonomic name differs between datasets</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Nonoverlap % by season</div>
+        <div class="season-row">
+          <div class="season-label">
+            <span>Breeding</span><strong id="pct-breeding">—</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="bar-breeding" style="width:0%"></div></div>
+        </div>
+        <div class="season-row">
+          <div class="season-label">
+            <span>Migration</span><strong id="pct-migration">—</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="bar-migration" style="width:0%"></div></div>
+        </div>
+        <div class="season-row">
+          <div class="season-label">
+            <span>Nonbreeding</span><strong id="pct-nonbreeding">—</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="bar-nonbreeding" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Cell counts — <span id="season-label-counts">breeding</span></div>
+        <div class="counts-grid">
+          <div class="count-card st">
+            <div class="count-val" id="cnt-st">—</div>
+            <div class="count-lbl">S&amp;T only</div>
+          </div>
+          <div class="count-card bl">
+            <div class="count-val" id="cnt-bl">—</div>
+            <div class="count-lbl">BirdLife only</div>
+          </div>
+          <div class="count-card ov">
+            <div class="count-val" id="cnt-ov">—</div>
+            <div class="count-lbl">Overlap</div>
+          </div>
+          <div class="count-card">
+            <div class="count-val" id="cnt-un">—</div>
+            <div class="count-lbl">Union (total)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Model outputs</div>
+        <div class="model-row">
+          <span class="model-lbl">Mixed model BLUP</span>
+          <span class="model-val" id="val-blup">—</span>
+        </div>
+        <div class="model-row">
+          <span class="model-lbl">RF predicted nonoverlap</span>
+          <span class="model-val" id="val-rf">—</span>
+        </div>
+        <div class="model-row">
+          <span class="model-lbl">RF rank (of 1,320)</span>
+          <span class="model-val" id="val-rfrank">—</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Species metadata</div>
+        <div class="chips" id="meta-chips"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--slate)">
+          <div>BirdLife name: <em id="bl-sci">—</em></div>
+          <div>S&amp;T name: <em id="st-sci">—</em></div>
+          <div style="margin-top:4px">BL map updated: <strong id="val-yr">—</strong></div>
+          <div>Crosswalk: <strong id="val-match">—</strong></div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /sidebar -->
+
+  <!-- Map -->
+  <div style="position:relative;flex:1;">
+    <div id="map"></div>
+    <div id="view-control">
+      <div class="leg-title">Map legend</div>
+      <div class="leg-row"><div class="leg-box" style="background:#2a9d5c"></div>Overlap</div>
+      <div class="leg-row"><div class="leg-box" style="background:#c06a10"></div>S&amp;T only</div>
+      <div class="leg-row"><div class="leg-box" style="background:#1a3a5c"></div>BirdLife only</div>
+      <hr class="view-sep">
+      <div class="leg-title">Show layers</div>
+      <div class="view-btn-group">
+        <button class="view-btn active" data-view="both">S&amp;T + BirdLife + Overlap</button>
+        <button class="view-btn" data-view="st">S&amp;T + Overlap</button>
+        <button class="view-btn" data-view="bl">BirdLife + Overlap</button>
+      </div>
+    </div>
+    <div id="loading">Loading…</div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── Map setup ─────────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [47, -96], zoom: 4,
+  renderer: L.canvas({ tolerance: 3 })
+});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+// Fix: map fills its container
+document.getElementById('map').style.height =
+  (document.getElementById('main').offsetHeight) + 'px';
+window.addEventListener('resize', () => {
+  document.getElementById('map').style.height =
+    (document.getElementById('main').offsetHeight) + 'px';
+  map.invalidateSize();
+});
+setTimeout(() => map.invalidateSize(), 100);
+
+// ── H3 helpers ────────────────────────────────────────────────────────────────
+function cellBoundary(id) {
+  // h3-js v4
+  if (typeof h3.cellToBoundary === 'function') return h3.cellToBoundary(id);
+  // h3-js v3
+  return h3.h3ToGeoBoundary(id);
+}
+
+function cellsToLayer(cellIds, color, opacity) {
+  if (!cellIds || cellIds.length === 0) return null;
+  const features = cellIds.map(id => {
+    const boundary = cellBoundary(id);
+    const coords   = boundary.map(([lat, lng]) => [lng, lat]);
+    coords.push(coords[0]); // close ring
+    return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} };
+  });
+  return L.geoJSON({ type: 'FeatureCollection', features }, {
+    style: { color, fillColor: color, weight: 0.3, fillOpacity: opacity, opacity: 0.5 },
+    renderer: L.canvas()
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allSpecies    = [];
+let currentData   = null;
+let currentSeason = 'breeding';
+let currentView   = 'both';   // 'both' | 'st' | 'bl'
+let activeLayers  = [];
+
+// ── Load species index ────────────────────────────────────────────────────────
+fetch('species_index.json')
+  .then(r => r.json())
+  .then(data => {
+    allSpecies = data;
+    console.log(`Loaded index: ${data.length} species`);
+  })
+  .catch(() => {
+    console.warn('species_index.json not found — run build_species_geojson.py first');
+  });
+
+// ── Search ────────────────────────────────────────────────────────────────────
+const searchEl    = document.getElementById('search');
+const dropdown    = document.getElementById('search-dropdown');
+
+searchEl.addEventListener('input', () => {
+  const q = searchEl.value.trim().toLowerCase();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+  const hits = allSpecies
+    .filter(s => (s.common || '').toLowerCase().includes(q) ||
+                 (s.sci    || '').toLowerCase().includes(q) ||
+                 (s.family || '').toLowerCase().includes(q))
+    .slice(0, 40);
+
+  if (!hits.length) { dropdown.style.display = 'none'; return; }
+
+  dropdown.innerHTML = hits.map(s => `
+    <div class="search-item" data-code="${s.code}">
+      <div class="sname">${s.common}</div>
+      <div class="ssci">${s.sci || ''}</div>
+      <div class="sfam">${s.family || ''}</div>
+    </div>`).join('');
+  dropdown.style.display = 'block';
+});
+
+dropdown.addEventListener('click', e => {
+  const item = e.target.closest('.search-item');
+  if (!item) return;
+  const code = item.dataset.code;
+  const sp   = allSpecies.find(s => s.code === code);
+  if (sp) searchEl.value = sp.common;
+  dropdown.style.display = 'none';
+  loadSpecies(code);
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-wrap')) dropdown.style.display = 'none';
+});
+
+searchEl.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { dropdown.style.display = 'none'; searchEl.blur(); }
+  if (e.key === 'Enter') {
+    const first = dropdown.querySelector('.search-item');
+    if (first) first.click();
+  }
+});
+
+// ── Season buttons ────────────────────────────────────────────────────────────
+document.querySelectorAll('.season-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSeason = btn.dataset.season;
+    if (currentData) renderSeason(currentData, currentSeason);
+    updateCounts(currentData, currentSeason);
+  });
+});
+
+// ── View toggle buttons ───────────────────────────────────────────────────────
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    if (currentData) renderSeason(currentData, currentSeason);
+  });
+});
+
+// ── Load and display species ──────────────────────────────────────────────────
+function loadSpecies(code) {
+  document.getElementById('loading').style.display = 'block';
+
+  fetch(`species_data/${code}.json`)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      currentData = data;
+      document.getElementById('loading').style.display = 'none';
+      updateSidebar(data);
+      renderSeason(data, currentSeason);
+    })
+    .catch(err => {
+      document.getElementById('loading').style.display = 'none';
+      alert(`Could not load data for ${code}.\n\nMake sure build_species_geojson.py has been run.\n(${err.message})`);
+    });
+}
+
+function renderSeason(data, season) {
+  activeLayers.forEach(l => map.removeLayer(l));
+  activeLayers = [];
+
+  const s = data.seasons[season];
+  if (!s) return;
+
+  const allLayers = [
+    ['overlap', s.overlap, '#2a9d5c', 0.65],
+    ['st',      s.st_only, '#c06a10', 0.65],
+    ['bl',      s.bl_only, '#1a3a5c', 0.55],
+  ];
+
+  const visible = allLayers.filter(([type]) => {
+    if (currentView === 'both') return true;
+    if (currentView === 'st')   return type === 'st'   || type === 'overlap';
+    if (currentView === 'bl')   return type === 'bl'   || type === 'overlap';
+    return true;
+  });
+
+  let bounds = null;
+  for (const [, cells, color, opacity] of visible) {
+    if (!cells || cells.length === 0) continue;
+    const layer = cellsToLayer(cells, color, opacity);
+    if (layer) {
+      layer.addTo(map);
+      activeLayers.push(layer);
+      const lb = layer.getBounds();
+      if (lb.isValid()) bounds = bounds ? bounds.extend(lb) : lb;
+    }
+  }
+
+  if (bounds && bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+}
+
+// ── Sidebar update ────────────────────────────────────────────────────────────
+function updateSidebar(data) {
+  document.getElementById('welcome').style.display        = 'none';
+  document.getElementById('species-panel').style.display  = 'block';
+
+  document.getElementById('sp-common').textContent = data.common || data.code;
+  document.getElementById('sp-sci').textContent    = data.st_sci || '';
+  document.getElementById('sp-family').textContent =
+    [data.family, data.order].filter(Boolean).join(' · ');
+
+  // Taxonomic flag
+  const taxFlag = document.getElementById('tax-flag');
+  if (data.tax_flag) {
+    taxFlag.style.display = 'block';
+    taxFlag.textContent   = `⚠ Name differs: "${data.st_sci}" (S&T) vs "${data.bl_sci}" (BirdLife)`;
+  } else {
+    taxFlag.style.display = 'none';
+  }
+
+  // Nonoverlap bars
+  for (const sea of ['breeding', 'migration', 'nonbreeding']) {
+    const s   = data.seasons[sea];
+    const pct = s ? s.nonoverlap_pct : null;
+    document.getElementById(`pct-${sea}`).textContent = pct != null ? pct.toFixed(1) + '%' : '—';
+    document.getElementById(`bar-${sea}`).style.width = pct != null ? pct + '%' : '0%';
+  }
+
+  updateCounts(data, currentSeason);
+
+  // Model outputs
+  const blup = data.blup;
+  const blupEl = document.getElementById('val-blup');
+  if (blup != null) {
+    blupEl.textContent = (blup >= 0 ? '+' : '') + blup.toFixed(2);
+    blupEl.className = 'model-val' + (blup > 2 ? ' high' : blup > 0.5 ? ' med' : '');
+  } else {
+    blupEl.textContent = '—';
+    blupEl.className = 'model-val';
+  }
+
+  const rf = data.rf_pct;
+  const rfEl = document.getElementById('val-rf');
+  if (rf != null) {
+    rfEl.textContent = rf.toFixed(1) + '%';
+    rfEl.className = 'model-val' + (rf > 90 ? ' high' : rf > 75 ? ' med' : ' low');
+  } else {
+    rfEl.textContent = '—'; rfEl.className = 'model-val';
+  }
+  document.getElementById('val-rfrank').textContent =
+    data.rf_rank != null ? `#${data.rf_rank}` : '—';
+
+  // Metadata chips
+  const chips = [];
+  if (data.iucn) {
+    const cls = data.iucn === 'LC' ? 'iucn-lc' :
+                data.iucn === 'NT' || data.iucn === 'VU' ? 'iucn-nt' : 'iucn-en';
+    chips.push(`<span class="chip ${cls}">${data.iucn}</span>`);
+  }
+  if (data.migration) chips.push(`<span class="chip">${data.migration}</span>`);
+  if (data.habitat)   chips.push(`<span class="chip">${data.habitat}</span>`);
+  if (data.lifestyle) chips.push(`<span class="chip">${data.lifestyle}</span>`);
+  document.getElementById('meta-chips').innerHTML = chips.join('');
+
+  document.getElementById('bl-sci').textContent  = data.bl_sci || '—';
+  document.getElementById('st-sci').textContent  = data.st_sci || '—';
+  document.getElementById('val-yr').textContent  = data.yrmodified || '—';
+  document.getElementById('val-match').textContent = data.match_type || '—';
+}
+
+function updateCounts(data, season) {
+  if (!data) return;
+  document.getElementById('season-label-counts').textContent = season;
+  const s = data.seasons[season];
+  if (!s) {
+    ['cnt-st','cnt-bl','cnt-ov','cnt-un'].forEach(id =>
+      document.getElementById(id).textContent = '—');
+    return;
+  }
+  document.getElementById('cnt-st').textContent = (s.st_cells   || 0).toLocaleString();
+  document.getElementById('cnt-bl').textContent = (s.bl_cells   || 0).toLocaleString();
+  document.getElementById('cnt-ov').textContent = (s.overlap_cells || 0).toLocaleString();
+  document.getElementById('cnt-un').textContent = (s.union_cells || 0).toLocaleString();
+}
+</script>
+</body>
+</html>

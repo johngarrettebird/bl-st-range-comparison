@@ -538,7 +538,10 @@ function updateSidebar(data) {
 
   // Taxonomic flag
   const taxFlag = document.getElementById('tax-flag');
-  if (data.tax_flag) {
+  if (data.match_type === 'bl_split_unioned') {
+    taxFlag.style.display = 'block';
+    taxFlag.textContent   = `⚠ BirdLife splits this species — BL range shown is the union of both splits (${data.bl_sci})`;
+  } else if (data.tax_flag) {
     taxFlag.style.display = 'block';
     taxFlag.textContent   = `⚠ Name differs: "${data.st_sci}" (S&T) vs "${data.bl_sci}" (BirdLife)`;
   } else {

@@ -121,7 +121,33 @@
   .section-title {
     font-size: 10px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.08em; color: var(--slate); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 5px;
   }
+
+  /* ── Info tooltip ────────────────────────────────────────────────────── */
+  .info-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--lgray); color: var(--slate);
+    font-size: 9px; font-weight: 700; font-style: normal;
+    cursor: default; flex-shrink: 0; position: relative;
+    text-transform: none; letter-spacing: 0;
+    border: none; padding: 0; line-height: 1;
+  }
+  .info-btn::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy); color: white;
+    font-size: 11px; font-weight: 400; text-transform: none;
+    letter-spacing: 0; line-height: 1.45;
+    padding: 7px 10px; border-radius: 6px;
+    width: 230px; white-space: pre-wrap;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    pointer-events: none; opacity: 0; transition: opacity 0.15s;
+    z-index: 9999;
+  }
+  .info-btn:hover::after { opacity: 1; }
 
   /* Nonoverlap bars */
   .season-row { margin: 5px 0; }
@@ -286,7 +312,17 @@
       </div>
 
       <div class="section">
-        <div class="section-title">Cell counts — <span id="season-label-counts">breeding</span></div>
+        <div class="section-title">
+          Cell counts — <span id="season-label-counts">breeding</span>
+          <i class="info-btn" data-tip="H3 hexagonal grid cells (~28 km across) where each dataset shows the species as present.
+
+S&T only — S&T models abundance here; BirdLife has no polygon.
+BirdLife only — BirdLife polygon covers this cell; S&T models no abundance.
+Overlap — both datasets agree the species is present.
+Union — total cells covered by either dataset.
+
+Centroid displacement = great-circle distance between the centres of the S&T range and BL range. Normalised = distance ÷ range radius proxy; &gt;1.0 means the centres are more than one range-width apart.">i</i>
+        </div>
         <div class="counts-grid">
           <div class="count-card st">
             <div class="count-val" id="cnt-st">—</div>
@@ -313,7 +349,14 @@
       </div>
 
       <div class="section">
-        <div class="section-title">Model outputs</div>
+        <div class="section-title">
+          Model outputs
+          <i class="info-btn" data-tip="Mixed model BLUP — species-level random effect from a linear mixed model (lme4, R). Positive = more disagreement than expected given the species' traits. Negative = less. Scale is logit-transformed nonoverlap.
+
+RF predicted nonoverlap — mean predicted nonoverlap % from a random forest (scikit-learn) using the same predictors.
+
+RF rank — species ranked by RF predicted nonoverlap across all 1,320 species in the model (#1 = most predicted disagreement).">i</i>
+        </div>
         <div class="model-row">
           <span class="model-lbl">Mixed model BLUP</span>
           <span class="model-val" id="val-blup">—</span>

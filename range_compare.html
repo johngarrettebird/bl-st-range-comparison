@@ -136,7 +136,7 @@
   }
   .info-btn::after {
     content: attr(data-tip);
-    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    position: absolute; top: calc(100% + 6px); left: 50%;
     transform: translateX(-50%);
     background: var(--navy); color: white;
     font-size: 11px; font-weight: 400; text-transform: none;
@@ -148,6 +148,9 @@
     z-index: 9999;
   }
   .info-btn:hover::after { opacity: 1; }
+  .info-btn.tip-up::after {
+    top: auto; bottom: calc(100% + 6px);
+  }
 
   /* Nonoverlap bars */
   .season-row { margin: 5px 0; }
@@ -351,7 +354,7 @@ Centroid displacement = great-circle distance between the centres of the S&T ran
       <div class="section">
         <div class="section-title">
           Model outputs
-          <i class="info-btn" data-tip="Mixed model BLUP — species-level random effect from a linear mixed model (lme4, R). Positive = more disagreement than expected given the species' traits. Negative = less. Scale is logit-transformed nonoverlap.
+          <i class="info-btn tip-up" data-tip="Mixed model BLUP — species-level random effect from a linear mixed model (lme4, R). Positive = more disagreement than expected given the species' traits. Negative = less. Scale is logit-transformed nonoverlap.
 
 RF predicted nonoverlap — mean predicted nonoverlap % from a random forest (scikit-learn) using the same predictors.
 

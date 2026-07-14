@@ -248,7 +248,7 @@
   </div>
   <div id="header-right">
     <button class="season-btn active" data-season="breeding">Breeding</button>
-    <button class="season-btn" data-season="migration">Migration</button>
+    <button class="season-btn" data-season="transition">Transition</button>
     <button class="season-btn" data-season="nonbreeding">Nonbreeding</button>
   </div>
 </div>
@@ -302,9 +302,9 @@
         </div>
         <div class="season-row">
           <div class="season-label">
-            <span>Migration</span><strong id="pct-migration">—</strong>
+            <span>Transition</span><strong id="pct-transition">—</strong>
           </div>
-          <div class="bar-track"><div class="bar-fill" id="bar-migration" style="width:0%"></div></div>
+          <div class="bar-track"><div class="bar-fill" id="bar-transition" style="width:0%"></div></div>
         </div>
         <div class="season-row">
           <div class="season-label">
@@ -343,11 +343,6 @@ Centroid displacement = great-circle distance between the centres of the S&T ran
             <div class="count-val" id="cnt-un">—</div>
             <div class="count-lbl">Union (total)</div>
           </div>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--slate)">
-          Centroid displacement: <strong id="val-disp">—</strong>
-          <span style="margin-left:6px;color:var(--lgray)">|</span>
-          <span style="margin-left:6px">normalised: <strong id="val-norm-disp">—</strong></span>
         </div>
       </div>
 
@@ -657,7 +652,7 @@ function updateSidebar(data) {
   }
 
   // Nonoverlap bars
-  for (const sea of ['breeding', 'migration', 'nonbreeding']) {
+  for (const sea of ['breeding', 'transition', 'nonbreeding']) {
     const s   = data.seasons[sea];
     const pct = s ? s.nonoverlap_pct : null;
     document.getElementById(`pct-${sea}`).textContent = pct != null ? pct.toFixed(1) + '%' : '—';
@@ -717,18 +712,12 @@ function updateCounts(data, season) {
   if (!s) {
     ['cnt-st','cnt-bl','cnt-ov','cnt-un'].forEach(id =>
       document.getElementById(id).textContent = '—');
-    document.getElementById('val-disp').textContent = '—';
-    document.getElementById('val-norm-disp').textContent = '—';
     return;
   }
   document.getElementById('cnt-st').textContent = (s.st_cells   || 0).toLocaleString();
   document.getElementById('cnt-bl').textContent = (s.bl_cells   || 0).toLocaleString();
   document.getElementById('cnt-ov').textContent = (s.overlap_cells || 0).toLocaleString();
   document.getElementById('cnt-un').textContent = (s.union_cells || 0).toLocaleString();
-  document.getElementById('val-disp').textContent =
-    s.centroid_dist_km != null ? `${Math.round(s.centroid_dist_km).toLocaleString()} km` : '—';
-  document.getElementById('val-norm-disp').textContent =
-    s.norm_displacement != null ? s.norm_displacement.toFixed(2) : '—';
 }
 </script>
 </body>

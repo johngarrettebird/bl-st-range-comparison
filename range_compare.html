@@ -80,6 +80,44 @@
   .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
   .nav-btn:disabled { opacity: 0.25; cursor: default; }
   #nav-label { font-size: 11px; color: rgba(255,255,255,0.6); min-width: 70px; text-align: center; }
+  #nav-adj { display: flex; align-items: center; gap: 6px; }
+  .nav-adj-name { font-size: 10px; color: rgba(255,255,255,0.45); max-width: 110px;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Review panel ────────────────────────────────────────────────────── */
+  #review-section { padding: 10px 14px; border-bottom: 1px solid var(--lgray); background: #fffef5; }
+  #review-row { display: flex; align-items: center; gap: 8px; }
+  #review-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal); flex-shrink: 0; }
+  #review-label { font-size: 12px; color: var(--navy); font-weight: 600; cursor: pointer; }
+  #review-notes {
+    width: 100%; margin-top: 6px; padding: 5px 8px; font-size: 11px;
+    border: 1px solid var(--lgray); border-radius: 4px; resize: vertical;
+    font-family: inherit; color: var(--text); min-height: 42px;
+    background: white; display: none;
+  }
+  #review-notes:focus { outline: none; border-color: var(--teal); }
+  #export-btn {
+    font-size: 11px; padding: 3px 9px; border-radius: 4px; cursor: pointer;
+    background: var(--teal); color: white; border: none; margin-left: auto;
+  }
+  #export-btn:hover { background: var(--navy); }
+
+  /* ── H3 cell tooltip ─────────────────────────────────────────────────── */
+  #cell-tip {
+    position: absolute; bottom: 8px; left: 8px; z-index: 1000;
+    background: rgba(26,58,92,0.82); color: white; font-size: 10px;
+    padding: 3px 7px; border-radius: 4px; pointer-events: none;
+    display: none; font-family: monospace; letter-spacing: 0.02em;
+  }
+
+  /* ── Zoom-out button ─────────────────────────────────────────────────── */
+  #zoom-out-btn {
+    position: absolute; top: 80px; left: 12px; z-index: 999;
+    background: white; border: 2px solid rgba(0,0,0,0.25); border-radius: 4px;
+    width: 26px; height: 26px; font-size: 14px; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center; color: #444;
+  }
+  #zoom-out-btn:hover { background: #f4f4f4; }
 
   /* ── Main layout ─────────────────────────────────────────────────────── */
   #main { flex: 1; display: flex; overflow: hidden; }
@@ -242,9 +280,15 @@
     <div id="search-dropdown"></div>
   </div>
   <div id="nav-wrap">
-    <button class="nav-btn" id="nav-prev" title="Previous species (←)" disabled>&#8592;</button>
+    <div id="nav-adj">
+      <span class="nav-adj-name" id="nav-prev-name"></span>
+      <button class="nav-btn" id="nav-prev" title="Previous species (←)" disabled>&#8592;</button>
+    </div>
     <span id="nav-label">—</span>
-    <button class="nav-btn" id="nav-next" title="Next species (→)" disabled>&#8594;</button>
+    <div id="nav-adj">
+      <button class="nav-btn" id="nav-next" title="Next species (→)" disabled>&#8594;</button>
+      <span class="nav-adj-name" id="nav-next-name"></span>
+    </div>
   </div>
   <div id="header-right">
     <button class="season-btn active" data-season="breeding">Breeding</button>
@@ -381,12 +425,22 @@ RF rank — species ranked by RF predicted nonoverlap across all 1,320 species i
         </div>
       </div>
 
+      <div id="review-section">
+        <div id="review-row">
+          <input type="checkbox" id="review-check">
+          <label id="review-label" for="review-check">Mark as reviewed</label>
+          <button id="export-btn" title="Export review status to CSV">⬇ Export</button>
+        </div>
+        <textarea id="review-notes" placeholder="Notes…"></textarea>
+      </div>
     </div>
   </div><!-- /sidebar -->
 
   <!-- Map -->
   <div style="position:relative;flex:1;">
     <div id="map"></div>
+    <div id="cell-tip"></div>
+    <button id="zoom-out-btn" title="Reset zoom to fit species range">⤢</button>
     <div id="view-control">
       <div class="leg-title">Map legend</div>
       <div class="leg-row"><div class="leg-box" style="background:#2a9d5c"></div>Overlap</div>
@@ -455,6 +509,9 @@ let currentSeason = 'breeding';
 let currentView   = 'both';   // 'both' | 'st' | 'bl'
 let activeLayers  = [];
 let currentIndex  = -1;
+let lastBounds    = null;      // retained zoom bounds
+let zoomLocked    = false;     // true after first fit; stay zoomed on season/nav change
+const REVIEW_KEY  = 'bl_st_review_v1';
 
 // ── Load species index ────────────────────────────────────────────────────────
 fetch('species_index.json?v=2')
@@ -541,17 +598,23 @@ document.querySelectorAll('.view-btn').forEach(btn => {
 
 // ── Nav helpers ───────────────────────────────────────────────────────────────
 function updateNav() {
-  const prevBtn = document.getElementById('nav-prev');
-  const nextBtn = document.getElementById('nav-next');
-  const label   = document.getElementById('nav-label');
+  const prevBtn      = document.getElementById('nav-prev');
+  const nextBtn      = document.getElementById('nav-next');
+  const label        = document.getElementById('nav-label');
+  const prevName     = document.getElementById('nav-prev-name');
+  const nextName     = document.getElementById('nav-next-name');
   if (currentIndex < 0 || !allSpecies.length) {
-    prevBtn.disabled = true;
-    nextBtn.disabled = true;
+    prevBtn.disabled = true; nextBtn.disabled = true;
     label.textContent = '—';
+    prevName.textContent = ''; nextName.textContent = '';
   } else {
     prevBtn.disabled = currentIndex === 0;
     nextBtn.disabled = currentIndex === allSpecies.length - 1;
     label.textContent = `${currentIndex + 1} / ${allSpecies.length}`;
+    prevName.textContent = currentIndex > 0
+      ? allSpecies[currentIndex - 1].common : '';
+    nextName.textContent = currentIndex < allSpecies.length - 1
+      ? allSpecies[currentIndex + 1].common : '';
   }
 }
 
@@ -576,6 +639,7 @@ document.addEventListener('keydown', e => {
 // ── Load and display species ──────────────────────────────────────────────────
 function loadSpecies(code) {
   document.getElementById('loading').style.display = 'block';
+  zoomLocked = false;   // new species → fit to its bounds on first render
 
   fetch(`species_data/${code}.json`)
     .then(r => {
@@ -586,6 +650,7 @@ function loadSpecies(code) {
       currentData = data;
       document.getElementById('loading').style.display = 'none';
       updateSidebar(data);
+      loadReview(code);
       renderSeason(data, currentSeason);
     })
     .catch(err => {
@@ -626,7 +691,14 @@ function renderSeason(data, season) {
     }
   }
 
-  if (bounds && bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+  if (bounds && bounds.isValid()) {
+    if (!zoomLocked) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+      lastBounds = bounds;
+      zoomLocked = true;
+    }
+    // if zoomLocked, keep current map view
+  }
 }
 
 // ── Sidebar update ────────────────────────────────────────────────────────────
@@ -719,6 +791,86 @@ function updateCounts(data, season) {
   document.getElementById('cnt-ov').textContent = (s.overlap_cells || 0).toLocaleString();
   document.getElementById('cnt-un').textContent = (s.union_cells || 0).toLocaleString();
 }
+
+// ── Zoom-out button ───────────────────────────────────────────────────────────
+document.getElementById('zoom-out-btn').addEventListener('click', () => {
+  if (lastBounds && lastBounds.isValid()) {
+    map.fitBounds(lastBounds, { padding: [30, 30] });
+  }
+});
+
+// ── H3 cell tooltip ───────────────────────────────────────────────────────────
+const cellTip = document.getElementById('cell-tip');
+map.on('mousemove', e => {
+  try {
+    const cellId = h3.latLngToCell(e.latlng.lat, e.latlng.lng, 5);
+    cellTip.textContent = cellId;
+    cellTip.style.display = 'block';
+  } catch { cellTip.style.display = 'none'; }
+});
+map.on('mouseout', () => { cellTip.style.display = 'none'; });
+
+// ── Review panel ──────────────────────────────────────────────────────────────
+function getReviewStore() {
+  try { return JSON.parse(localStorage.getItem(REVIEW_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveReviewStore(store) {
+  localStorage.setItem(REVIEW_KEY, JSON.stringify(store));
+}
+
+function loadReview(code) {
+  const store   = getReviewStore();
+  const entry   = store[code] || {};
+  const chk     = document.getElementById('review-check');
+  const notes   = document.getElementById('review-notes');
+  chk.checked   = !!entry.checked;
+  notes.value   = entry.notes || '';
+  notes.style.display = chk.checked ? 'block' : 'none';
+}
+
+document.getElementById('review-check').addEventListener('change', () => {
+  if (!currentData) return;
+  const code  = currentData.code;
+  const store = getReviewStore();
+  const chk   = document.getElementById('review-check');
+  const notes = document.getElementById('review-notes');
+  if (!store[code]) store[code] = {};
+  store[code].checked = chk.checked;
+  notes.style.display = chk.checked ? 'block' : 'none';
+  saveReviewStore(store);
+});
+
+document.getElementById('review-notes').addEventListener('input', () => {
+  if (!currentData) return;
+  const code  = currentData.code;
+  const store = getReviewStore();
+  if (!store[code]) store[code] = {};
+  store[code].notes = document.getElementById('review-notes').value;
+  store[code].common = currentData.common;
+  saveReviewStore(store);
+});
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const store = getReviewStore();
+  const rows  = [['species_code','common_name','reviewed','notes']];
+  // Include all species from index, not just reviewed ones
+  allSpecies.forEach(sp => {
+    const e = store[sp.code] || {};
+    rows.push([
+      sp.code,
+      `"${(sp.common || '').replace(/"/g,'""')}"`,
+      e.checked ? 'yes' : 'no',
+      `"${(e.notes || '').replace(/"/g,'""').replace(/\n/g,' ')}"`
+    ]);
+  });
+  const csv  = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'bl_st_review.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
 </script>
 </body>
 </html>

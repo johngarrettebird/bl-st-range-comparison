@@ -457,7 +457,7 @@ let activeLayers  = [];
 let currentIndex  = -1;
 
 // ── Load species index ────────────────────────────────────────────────────────
-fetch('species_index.json')
+fetch('species_index.json?v=2')
   .then(r => r.json())
   .then(data => {
     allSpecies = data;

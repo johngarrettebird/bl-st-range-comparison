@@ -291,9 +291,14 @@
     </div>
   </div>
   <div id="header-right">
-    <button class="season-btn active" data-season="breeding">Breeding</button>
-    <button class="season-btn" data-season="transition">Transition</button>
-    <button class="season-btn" data-season="nonbreeding">Nonbreeding</button>
+    <div id="season-btns-migratory">
+      <button class="season-btn active" data-season="breeding">Breeding</button>
+      <button class="season-btn" data-season="transition">Transition</button>
+      <button class="season-btn" data-season="nonbreeding">Nonbreeding</button>
+    </div>
+    <div id="season-btns-resident" style="display:none">
+      <button class="season-btn active" data-season="breeding">Year-round</button>
+    </div>
   </div>
 </div>
 
@@ -336,7 +341,7 @@
         <div id="tax-flag">⚠ Taxonomic name differs between datasets</div>
       </div>
 
-      <div class="section">
+      <div class="section" id="season-bars-migratory">
         <div class="section-title">Nonoverlap % by season</div>
         <div class="season-row">
           <div class="season-label">
@@ -355,6 +360,18 @@
             <span>Nonbreeding</span><strong id="pct-nonbreeding">—</strong>
           </div>
           <div class="bar-track"><div class="bar-fill" id="bar-nonbreeding" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="section" id="season-bars-resident" style="display:none">
+        <div class="section-title">Year-round range</div>
+        <div class="season-row">
+          <div class="season-label">
+            <span>Year-round</span><strong id="pct-yearround">—</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="bar-yearround" style="width:0%"></div></div>
+        </div>
+        <div style="font-size:10px;color:var(--slate);margin-top:4px;font-style:italic">
+          S&T models a single year-round range for this species — no seasonal variation.
         </div>
       </div>
 
@@ -586,6 +603,19 @@ document.querySelectorAll('.season-btn').forEach(btn => {
   });
 });
 
+function applyResidentMode(isResident) {
+  document.getElementById('season-btns-migratory').style.display = isResident ? 'none' : '';
+  document.getElementById('season-btns-resident').style.display  = isResident ? '' : 'none';
+  document.getElementById('season-bars-migratory').style.display = isResident ? 'none' : '';
+  document.getElementById('season-bars-resident').style.display  = isResident ? '' : 'none';
+  if (isResident && currentSeason !== 'breeding') {
+    // residents only have breeding season data — switch to it
+    currentSeason = 'breeding';
+    document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-season="breeding"]').classList.add('active');
+  }
+}
+
 // ── View toggle buttons ───────────────────────────────────────────────────────
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -711,6 +741,9 @@ function updateSidebar(data) {
   document.getElementById('sp-family').textContent =
     [data.family, data.order].filter(Boolean).join(' · ');
 
+  // Show resident vs migratory mode
+  applyResidentMode(!!data.is_resident);
+
   // Taxonomic flag
   const taxFlag = document.getElementById('tax-flag');
   if (data.match_type === 'bl_split_unioned') {
@@ -724,11 +757,18 @@ function updateSidebar(data) {
   }
 
   // Nonoverlap bars
-  for (const sea of ['breeding', 'transition', 'nonbreeding']) {
-    const s   = data.seasons[sea];
+  if (data.is_resident) {
+    const s   = data.seasons['breeding'];
     const pct = s ? s.nonoverlap_pct : null;
-    document.getElementById(`pct-${sea}`).textContent = pct != null ? pct.toFixed(1) + '%' : '—';
-    document.getElementById(`bar-${sea}`).style.width = pct != null ? pct + '%' : '0%';
+    document.getElementById('pct-yearround').textContent = pct != null ? pct.toFixed(1) + '%' : '—';
+    document.getElementById('bar-yearround').style.width = pct != null ? pct + '%' : '0%';
+  } else {
+    for (const sea of ['breeding', 'transition', 'nonbreeding']) {
+      const s   = data.seasons[sea];
+      const pct = s ? s.nonoverlap_pct : null;
+      document.getElementById(`pct-${sea}`).textContent = pct != null ? pct.toFixed(1) + '%' : '—';
+      document.getElementById(`bar-${sea}`).style.width = pct != null ? pct + '%' : '0%';
+    }
   }
 
   updateCounts(data, currentSeason);

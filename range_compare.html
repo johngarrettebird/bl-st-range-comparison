@@ -438,7 +438,7 @@ RF rank — species ranked by RF predicted nonoverlap across all 1,320 species i
           <div>S&amp;T name: <em id="st-sci">—</em></div>
           <div style="margin-top:4px">BL map updated: <strong id="val-yr">—</strong></div>
           <div>Crosswalk: <strong id="val-match">—</strong></div>
-          <div style="margin-top:4px">Primary BCR: <strong id="val-bcr">—</strong></div>
+          <div style="margin-top:4px">BCRs: <span id="val-bcr">—</span></div>
         </div>
       </div>
 
@@ -823,10 +823,17 @@ function updateSidebar(data) {
   document.getElementById('st-sci').textContent  = data.st_sci || '—';
   document.getElementById('val-yr').textContent  = data.yrmodified || '—';
   document.getElementById('val-match').textContent = data.match_type || '—';
-  const bcrLabel = data.bcr_code
-    ? `BCR ${data.bcr_code} — ${data.bcr_name || ''}`
-    : '—';
-  document.getElementById('val-bcr').textContent = bcrLabel;
+  // Show all BCRs at ≥5% threshold, sorted by coverage
+  const bcrEl = document.getElementById('val-bcr');
+  if (data.bcrs && data.bcrs.length > 0) {
+    bcrEl.innerHTML = data.bcrs
+      .map(b => `<span title="${b.pct.toFixed(1)}% of breeding cells">BCR ${b.code} — ${b.name} (${b.pct.toFixed(0)}%)</span>`)
+      .join('<br>');
+  } else if (data.bcr_code) {
+    bcrEl.textContent = `BCR ${data.bcr_code} — ${data.bcr_name || ''}`;
+  } else {
+    bcrEl.textContent = '—';
+  }
 }
 
 function updateCounts(data, season) {

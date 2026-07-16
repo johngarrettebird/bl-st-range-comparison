@@ -505,12 +505,24 @@ function cellBoundary(id) {
   return h3.h3ToGeoBoundary(id);
 }
 
+function normAntimeridian(coords) {
+  // Fix antimeridian-crossing polygons: if vertices span > 180° longitude,
+  // shift negative longitudes by +360 so the polygon renders correctly.
+  const lngs = coords.map(c => c[0]);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  if (maxLng - minLng > 180) {
+    return coords.map(([lng, lat]) => [lng < 0 ? lng + 360 : lng, lat]);
+  }
+  return coords;
+}
+
 function cellsToLayer(cellIds, color, opacity) {
   if (!cellIds || cellIds.length === 0) return null;
   const features = cellIds.map(id => {
     const boundary = cellBoundary(id);
-    const coords   = boundary.map(([lat, lng]) => [lng, lat]);
+    let coords = boundary.map(([lat, lng]) => [lng, lat]);
     coords.push(coords[0]); // close ring
+    coords = normAntimeridian(coords);
     return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} };
   });
   return L.geoJSON({ type: 'FeatureCollection', features }, {

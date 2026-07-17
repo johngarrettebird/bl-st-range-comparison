@@ -189,6 +189,13 @@
   .info-btn.tip-up::after {
     top: auto; bottom: calc(100% + 6px);
   }
+  /* Left-anchored: tooltip starts at left edge of button, stays within sidebar */
+  .info-btn.tip-left::after {
+    left: 0; transform: none;
+  }
+  .info-btn.tip-left.tip-up::after {
+    top: auto; bottom: calc(100% + 6px); left: 0; transform: none;
+  }
 
   /* Nonoverlap bars */
   .season-row { margin: 5px 0; }
@@ -419,7 +426,7 @@ Union — total cells covered by either dataset (denominator for nonoverlap %)."
           Disagreement distance: <strong id="val-ddist">—</strong>
           <span style="margin-left:6px;color:var(--lgray)">|</span>
           <span style="margin-left:6px">normalised: <strong id="val-dnorm">—</strong></span>
-          <i class="info-btn tip-up" style="margin-left:4px" data-tip="Disagreement distance — how far apart are the non-overlapping cells?
+          <i class="info-btn tip-up tip-left" style="margin-left:4px" data-tip="Disagreement distance — how far apart are the non-overlapping cells?
 
 Computed as the great-circle distance (km) between:
   • the geographic centre of S&amp;T-only cells, and

@@ -432,6 +432,14 @@ Union — total cells covered by either dataset (denominator for nonoverlap %)."
                    color:var(--slate);font-size:9px;font-weight:700;border:none;
                    cursor:pointer;margin-left:4px;padding:0;flex-shrink:0;">i</button>
         </div>
+        <div style="margin-top:6px">
+          <button id="ddist-toggle-btn"
+            style="font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;
+                   background:var(--offwhite);color:var(--slate);border:1px solid var(--lgray);
+                   width:100%;">
+            Show disagreement centroids on map
+          </button>
+        </div>
       </div>
 
       <div class="section">
@@ -713,6 +721,65 @@ function clearBcrHighlight() {
   if (bcrHighlight) { map.removeLayer(bcrHighlight); bcrHighlight = null; }
 }
 
+// ── Disagreement centroid layer ───────────────────────────────────────────────
+let ddistLayerOn  = false;
+let ddistLayer    = null;
+
+function updateDdistLayer(data, season) {
+  clearDdistLayer();
+  if (!ddistLayerOn || !data) return;
+  const s = data.seasons[season];
+  if (!s) return;
+  const stc = s.st_only_centroid;
+  const blc = s.bl_only_centroid;
+  if (!stc || !blc) return;
+
+  const layers = [];
+
+  // Dashed line between centroids
+  layers.push(L.polyline([[stc[0], stc[1]], [blc[0], blc[1]]], {
+    color: '#888', weight: 2, dashArray: '6,4', opacity: 0.8
+  }));
+
+  // Distance label at midpoint
+  const midLat = (stc[0] + blc[0]) / 2;
+  const midLng = (stc[1] + blc[1]) / 2;
+  const distKm = s.disagreement_dist_km;
+  if (distKm != null) {
+    layers.push(L.marker([midLat, midLng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:rgba(255,255,255,0.85);border:1px solid #aaa;
+                           border-radius:4px;padding:2px 5px;font-size:10px;
+                           color:#444;white-space:nowrap;font-family:Calibri,sans-serif">
+                 ${Math.round(distKm).toLocaleString()} km
+               </div>`,
+        iconAnchor: [30, 10]
+      })
+    }));
+  }
+
+  // S&T-only centroid marker (orange)
+  layers.push(L.circleMarker([stc[0], stc[1]], {
+    radius: 8, color: '#fff', weight: 2,
+    fillColor: '#c06a10', fillOpacity: 0.9
+  }).bindTooltip('S&T-only centroid<br><small style="color:#aaa">Geographic average of S&T-only cells —<br>may not correspond to occupied habitat</small>',
+    { permanent: false, direction: 'top' }));
+
+  // BL-only centroid marker (navy)
+  layers.push(L.circleMarker([blc[0], blc[1]], {
+    radius: 8, color: '#fff', weight: 2,
+    fillColor: '#1a3a5c', fillOpacity: 0.9
+  }).bindTooltip('BL-only centroid<br><small style="color:#aaa">Geographic average of BL-only cells —<br>may not correspond to occupied habitat</small>',
+    { permanent: false, direction: 'top' }));
+
+  ddistLayer = L.layerGroup(layers).addTo(map);
+}
+
+function clearDdistLayer() {
+  if (ddistLayer) { map.removeLayer(ddistLayer); ddistLayer = null; }
+}
+
 // ── Load species index ────────────────────────────────────────────────────────
 fetch('species_index.json?v=2')
   .then(r => r.json())
@@ -853,6 +920,15 @@ document.addEventListener('keydown', e => {
 function loadSpecies(code) {
   document.getElementById('loading').style.display = 'block';
   zoomLocked = false;   // new species → fit to its bounds on first render
+  // Reset centroid toggle
+  ddistLayerOn = false;
+  clearDdistLayer();
+  const dtb = document.getElementById('ddist-toggle-btn');
+  if (dtb) {
+    dtb.style.background = 'var(--offwhite)'; dtb.style.color = 'var(--slate)';
+    dtb.style.borderColor = 'var(--lgray)';
+    dtb.textContent = 'Show disagreement centroids on map';
+  }
 
   fetch(`species_data/${code}.json`)
     .then(r => {
@@ -1039,6 +1115,8 @@ function updateCounts(data, season) {
   document.getElementById('val-dnorm').textContent =
     s.norm_disagreement_dist != null
       ? s.norm_disagreement_dist.toFixed(2) : '—';
+  // Refresh centroid layer if active
+  if (ddistLayerOn) updateDdistLayer(data, season);
 }
 
 // ── Zoom-out button ───────────────────────────────────────────────────────────
@@ -1058,6 +1136,25 @@ map.on('mousemove', e => {
   } catch { cellTip.style.display = 'none'; }
 });
 map.on('mouseout', () => { cellTip.style.display = 'none'; });
+
+// ── Disagreement centroid toggle ─────────────────────────────────────────────
+document.getElementById('ddist-toggle-btn').addEventListener('click', () => {
+  ddistLayerOn = !ddistLayerOn;
+  const btn = document.getElementById('ddist-toggle-btn');
+  if (ddistLayerOn) {
+    btn.style.background = 'var(--teal)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--teal)';
+    btn.textContent = 'Hide disagreement centroids';
+    updateDdistLayer(currentData, currentSeason);
+  } else {
+    btn.style.background = 'var(--offwhite)';
+    btn.style.color = 'var(--slate)';
+    btn.style.borderColor = 'var(--lgray)';
+    btn.textContent = 'Show disagreement centroids on map';
+    clearDdistLayer();
+  }
+});
 
 // ── Disagreement distance modal ───────────────────────────────────────────────
 const ddistModal = document.getElementById('ddist-modal');

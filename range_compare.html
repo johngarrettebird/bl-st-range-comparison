@@ -565,6 +565,36 @@ let lastBounds    = null;      // retained zoom bounds
 let zoomLocked    = false;     // true after first fit; stay zoomed on season/nav change
 const REVIEW_KEY  = 'bl_st_review_v1';
 
+// ── BCR highlight layer ───────────────────────────────────────────────────────
+let bcrGeoJSON    = null;   // loaded once
+let bcrHighlight  = null;   // current Leaflet layer shown on hover
+
+fetch('bcr_polygons.geojson')
+  .then(r => r.json())
+  .then(data => { bcrGeoJSON = data; })
+  .catch(() => console.warn('bcr_polygons.geojson not found'));
+
+function showBcrHighlight(bcrCode) {
+  clearBcrHighlight();
+  if (!bcrGeoJSON || !bcrCode) return;
+  const feat = bcrGeoJSON.features.find(f => f.properties.bcr_code === bcrCode);
+  if (!feat) return;
+  bcrHighlight = L.geoJSON(feat, {
+    style: {
+      color: '#ffffff',
+      weight: 2.5,
+      fillColor: '#ffffff',
+      fillOpacity: 0.12,
+      opacity: 0.85,
+      dashArray: '5,3',
+    }
+  }).addTo(map);
+}
+
+function clearBcrHighlight() {
+  if (bcrHighlight) { map.removeLayer(bcrHighlight); bcrHighlight = null; }
+}
+
 // ── Load species index ────────────────────────────────────────────────────────
 fetch('species_index.json?v=2')
   .then(r => r.json())
@@ -850,10 +880,21 @@ function updateSidebar(data) {
   const bcrEl = document.getElementById('val-bcr');
   if (data.bcrs && data.bcrs.length > 0) {
     bcrEl.innerHTML = data.bcrs
-      .map(b => `<span title="${b.pct.toFixed(1)}% of breeding cells">BCR ${b.code} — ${b.name} (${b.pct.toFixed(0)}%)</span>`)
+      .map(b => `<span class="bcr-link" data-bcr="${b.code}"
+                       style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px"
+                       title="Hover to highlight BCR ${b.code} on map">BCR ${b.code} — ${b.name} (${b.pct.toFixed(0)}%)</span>`)
       .join('<br>');
+    // Wire hover handlers
+    bcrEl.querySelectorAll('.bcr-link').forEach(el => {
+      el.addEventListener('mouseenter', () => showBcrHighlight(+el.dataset.bcr));
+      el.addEventListener('mouseleave', clearBcrHighlight);
+    });
   } else if (data.bcr_code) {
-    bcrEl.textContent = `BCR ${data.bcr_code} — ${data.bcr_name || ''}`;
+    bcrEl.innerHTML = `<span class="bcr-link" data-bcr="${data.bcr_code}"
+                              style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px"
+                              title="Hover to highlight BCR ${data.bcr_code} on map">BCR ${data.bcr_code} — ${data.bcr_name || ''}</span>`;
+    bcrEl.querySelector('.bcr-link').addEventListener('mouseenter', () => showBcrHighlight(data.bcr_code));
+    bcrEl.querySelector('.bcr-link').addEventListener('mouseleave', clearBcrHighlight);
   } else {
     bcrEl.textContent = '—';
   }

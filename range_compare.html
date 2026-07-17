@@ -189,12 +189,12 @@
   .info-btn.tip-up::after {
     top: auto; bottom: calc(100% + 6px);
   }
-  /* Left-anchored: tooltip starts at left edge of button, stays within sidebar */
+  /* Right-anchored: tooltip right edge aligns with button, grows leftward */
   .info-btn.tip-left::after {
-    left: 0; transform: none;
+    left: auto; right: 0; transform: none;
   }
   .info-btn.tip-left.tip-up::after {
-    top: auto; bottom: calc(100% + 6px); left: 0; transform: none;
+    top: auto; bottom: calc(100% + 6px); left: auto; right: 0; transform: none;
   }
 
   /* Nonoverlap bars */

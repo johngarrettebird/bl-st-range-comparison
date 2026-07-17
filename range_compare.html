@@ -616,9 +616,22 @@ BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T
         meaningful information that nonoverlap % alone doesn't convey.</p>
     </div>
 
+    <p style="font-size:12px;line-height:1.55;color:#4a5f72;margin-bottom:8px">
+      <strong>Normalised</strong> = distance ÷ (√union_cells × 14 km)</p>
+    <p style="font-size:12px;line-height:1.55;color:#4a5f72;margin-bottom:8px">
+      <em>Why this formula?</em> Each H3 res-5 cell has a diameter of ~28 km, so a radius of
+      ~14 km. If you imagine the union of all cells as a single circle, its radius would be
+      approximately √n_union_cells × 14 km — the "range radius" proxy. Dividing the raw
+      distance by this gives a <strong>scale-free ratio</strong>:</p>
+    <ul style="font-size:12px;line-height:1.6;color:#4a5f72;margin:0 0 8px 16px">
+      <li><strong>≈ 0</strong> — disagreement is at the range boundary (marginal)</li>
+      <li><strong>≈ 1</strong> — disagreement centroids are one range-radius apart</li>
+      <li><strong>&gt; 2</strong> — exclusive cells are genuinely remote relative to range size</li>
+    </ul>
     <p style="font-size:12px;line-height:1.55;color:#4a5f72">
-      <strong>Normalised</strong> = distance ÷ (√union_cells × 14 km) — scale-free and
-      comparable across species regardless of range size. Correlates weakly with nonoverlap %
+      This makes the metric comparable across species: a 500 km raw distance means very
+      different things for a tiny island endemic vs a continent-wide species. Normalising
+      by range size puts both on the same scale. Correlates weakly with nonoverlap %
       (r = 0.09), so it captures a genuinely distinct dimension of disagreement.</p>
   </div>
 </div>

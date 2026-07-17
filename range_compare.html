@@ -774,6 +774,17 @@ function updateDdistLayer(data, season) {
     { permanent: false, direction: 'top' }));
 
   ddistLayer = L.layerGroup(layers).addTo(map);
+
+  // If either centroid is outside the current viewport, extend bounds to include both
+  if (stc && blc) {
+    const currentBounds = map.getBounds();
+    const stPt = L.latLng(stc[0], stc[1]);
+    const blPt = L.latLng(blc[0], blc[1]);
+    if (!currentBounds.contains(stPt) || !currentBounds.contains(blPt)) {
+      const extBounds = currentBounds.extend(stPt).extend(blPt);
+      map.fitBounds(extBounds, { padding: [40, 40], maxZoom: map.getZoom() });
+    }
+  }
 }
 
 function clearDdistLayer() {

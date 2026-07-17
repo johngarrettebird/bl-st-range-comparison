@@ -415,6 +415,23 @@ Union — total cells covered by either dataset (denominator for nonoverlap %)."
             <div class="count-lbl">Union (total)</div>
           </div>
         </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--slate)">
+          Disagreement distance: <strong id="val-ddist">—</strong>
+          <span style="margin-left:6px;color:var(--lgray)">|</span>
+          <span style="margin-left:6px">normalised: <strong id="val-dnorm">—</strong></span>
+          <i class="info-btn tip-up" style="margin-left:4px" data-tip="Disagreement distance — how far apart are the non-overlapping cells?
+
+Computed as the great-circle distance (km) between:
+  • the geographic centre of S&amp;T-only cells, and
+  • the geographic centre of BL-only cells.
+
+Low distance = both products agree on WHERE the species is, but disagree on extent (marginal disagreement).
+High distance = the exclusive cells are in genuinely different locations.
+
+Normalised = distance ÷ (√union_cells × 14 km) — scale-free, comparable across species.
+
+Correlates weakly with nonoverlap % (r = 0.09) — captures a distinct dimension.">i</i>
+        </div>
       </div>
 
       <div class="section">
@@ -907,12 +924,20 @@ function updateCounts(data, season) {
   if (!s) {
     ['cnt-st','cnt-bl','cnt-ov','cnt-un'].forEach(id =>
       document.getElementById(id).textContent = '—');
+    document.getElementById('val-ddist').textContent = '—';
+    document.getElementById('val-dnorm').textContent = '—';
     return;
   }
   document.getElementById('cnt-st').textContent = (s.st_cells   || 0).toLocaleString();
   document.getElementById('cnt-bl').textContent = (s.bl_cells   || 0).toLocaleString();
   document.getElementById('cnt-ov').textContent = (s.overlap_cells || 0).toLocaleString();
   document.getElementById('cnt-un').textContent = (s.union_cells || 0).toLocaleString();
+  document.getElementById('val-ddist').textContent =
+    s.disagreement_dist_km != null
+      ? `${Math.round(s.disagreement_dist_km).toLocaleString()} km` : '—';
+  document.getElementById('val-dnorm').textContent =
+    s.norm_disagreement_dist != null
+      ? s.norm_disagreement_dist.toFixed(2) : '—';
 }
 
 // ── Zoom-out button ───────────────────────────────────────────────────────────

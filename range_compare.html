@@ -426,18 +426,11 @@ Union — total cells covered by either dataset (denominator for nonoverlap %)."
           Disagreement distance: <strong id="val-ddist">—</strong>
           <span style="margin-left:6px;color:var(--lgray)">|</span>
           <span style="margin-left:6px">normalised: <strong id="val-dnorm">—</strong></span>
-          <i class="info-btn tip-up tip-left" style="margin-left:4px" data-tip="Disagreement distance — how far apart are the non-overlapping cells?
-
-Computed as the great-circle distance (km) between:
-  • the geographic centre of S&amp;T-only cells, and
-  • the geographic centre of BL-only cells.
-
-Low distance = both products agree on WHERE the species is, but disagree on extent (marginal disagreement).
-High distance = the exclusive cells are in genuinely different locations.
-
-Normalised = distance ÷ (√union_cells × 14 km) — scale-free, comparable across species.
-
-Correlates weakly with nonoverlap % (r = 0.09) — captures a distinct dimension.">i</i>
+          <button id="ddist-info-btn" title="What is disagreement distance?"
+            style="display:inline-flex;align-items:center;justify-content:center;
+                   width:13px;height:13px;border-radius:50%;background:var(--lgray);
+                   color:var(--slate);font-size:9px;font-weight:700;border:none;
+                   cursor:pointer;margin-left:4px;padding:0;flex-shrink:0;">i</button>
         </div>
       </div>
 
@@ -520,6 +513,82 @@ BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T
     </div>
     <div id="loading">Loading…</div>
   </div>
+
+<!-- Disagreement distance modal -->
+<div id="ddist-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+     z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:10px;max-width:560px;width:90%;
+              padding:24px 28px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.25);
+              font-family:Calibri,sans-serif;color:#1c2b38;">
+    <button id="ddist-modal-close"
+      style="position:absolute;top:12px;right:14px;background:none;border:none;
+             font-size:20px;cursor:pointer;color:#4a5f72;line-height:1;">✕</button>
+    <h2 style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:4px">
+      Disagreement centroid distance</h2>
+    <p style="font-size:12px;color:#4a5f72;margin-bottom:16px">
+      How far apart are the non-overlapping cells?</p>
+
+    <!-- SVG diagram -->
+    <svg viewBox="0 0 500 160" style="width:100%;margin-bottom:16px;font-family:Calibri,sans-serif">
+      <!-- Left panel: marginal disagreement -->
+      <rect x="10" y="10" width="220" height="140" rx="6" fill="#f4f6f8" stroke="#d0d8e0" stroke-width="1"/>
+      <text x="120" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#1a3a5c">Low distance</text>
+      <text x="120" y="41" text-anchor="middle" font-size="10" fill="#4a5f72">Marginal disagreement</text>
+      <!-- S&T circle -->
+      <circle cx="100" cy="95" r="38" fill="#c06a10" opacity="0.25"/>
+      <!-- BL circle -->
+      <circle cx="130" cy="95" r="38" fill="#1a3a5c" opacity="0.25"/>
+      <!-- Overlap -->
+      <text x="115" y="99" text-anchor="middle" font-size="9" fill="#296239" font-weight="700">Overlap</text>
+      <!-- S&T only centroid -->
+      <circle cx="83" cy="90" r="4" fill="#c06a10"/>
+      <text x="65" y="115" font-size="9" fill="#c06a10">S&amp;T-only</text>
+      <text x="65" y="125" font-size="9" fill="#c06a10">centroid</text>
+      <!-- BL only centroid -->
+      <circle cx="147" cy="90" r="4" fill="#1a3a5c"/>
+      <text x="132" y="115" font-size="9" fill="#1a3a5c">BL-only</text>
+      <text x="132" y="125" font-size="9" fill="#1a3a5c">centroid</text>
+      <!-- distance arrow -->
+      <line x1="87" y1="90" x2="143" y2="90" stroke="#888" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <text x="115" y="82" text-anchor="middle" font-size="9" fill="#888">short</text>
+
+      <!-- Right panel: location conflict -->
+      <rect x="270" y="10" width="220" height="140" rx="6" fill="#f4f6f8" stroke="#d0d8e0" stroke-width="1"/>
+      <text x="380" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#1a3a5c">High distance</text>
+      <text x="380" y="41" text-anchor="middle" font-size="10" fill="#4a5f72">Location conflict</text>
+      <!-- S&T circle left side -->
+      <circle cx="315" cy="95" r="30" fill="#c06a10" opacity="0.3"/>
+      <!-- BL circle right side -->
+      <circle cx="435" cy="95" r="30" fill="#1a3a5c" opacity="0.3"/>
+      <!-- S&T centroid -->
+      <circle cx="315" cy="90" r="4" fill="#c06a10"/>
+      <text x="300" y="115" font-size="9" fill="#c06a10">S&amp;T-only</text>
+      <text x="300" y="125" font-size="9" fill="#c06a10">centroid</text>
+      <!-- BL centroid -->
+      <circle cx="435" cy="90" r="4" fill="#1a3a5c"/>
+      <text x="420" y="115" font-size="9" fill="#1a3a5c">BL-only</text>
+      <text x="420" y="125" font-size="9" fill="#1a3a5c">centroid</text>
+      <!-- distance arrow -->
+      <line x1="319" y1="90" x2="431" y2="90" stroke="#888" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <text x="375" y="82" text-anchor="middle" font-size="9" fill="#888">far apart</text>
+    </svg>
+
+    <p style="font-size:12px;line-height:1.55;margin-bottom:10px">
+      Computed as the <strong>great-circle distance (km)</strong> between the geographic centre
+      of all S&amp;T-only cells and the geographic centre of all BL-only cells — for the
+      currently displayed season.</p>
+    <p style="font-size:12px;line-height:1.55;margin-bottom:10px">
+      <strong>Low distance</strong> — both products agree on <em>where</em> the species is,
+      but disagree on range extent (e.g. one maps further north). The exclusive cells are
+      near each other.<br>
+      <strong>High distance</strong> — the products place the species in genuinely different
+      geographic locations (e.g. S&amp;T models a western population; BL maps an eastern one).</p>
+    <p style="font-size:12px;line-height:1.55;color:#4a5f72">
+      <strong>Normalised</strong> = distance ÷ (√union_cells × 14 km) — scale-free and
+      comparable across species regardless of range size. Correlates weakly with nonoverlap %
+      (r = 0.09), so it captures a genuinely distinct dimension of disagreement.</p>
+  </div>
+</div>
 
 </div><!-- /main -->
 
@@ -964,6 +1033,21 @@ map.on('mousemove', e => {
   } catch { cellTip.style.display = 'none'; }
 });
 map.on('mouseout', () => { cellTip.style.display = 'none'; });
+
+// ── Disagreement distance modal ───────────────────────────────────────────────
+const ddistModal = document.getElementById('ddist-modal');
+document.getElementById('ddist-info-btn').addEventListener('click', () => {
+  ddistModal.style.display = 'flex';
+});
+document.getElementById('ddist-modal-close').addEventListener('click', () => {
+  ddistModal.style.display = 'none';
+});
+ddistModal.addEventListener('click', e => {
+  if (e.target === ddistModal) ddistModal.style.display = 'none';
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') ddistModal.style.display = 'none';
+});
 
 // ── Review panel ──────────────────────────────────────────────────────────────
 function getReviewStore() {

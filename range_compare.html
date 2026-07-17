@@ -342,7 +342,19 @@
       </div>
 
       <div class="section" id="season-bars-migratory">
-        <div class="section-title">Nonoverlap % by season</div>
+        <div class="section-title">
+          Nonoverlap % by season
+          <i class="info-btn" data-tip="How much do the S&amp;T and BirdLife range products disagree per season?
+
+0% = maps agree perfectly on every cell.
+100% = maps share no cells at all.
+
+Computed as: (S&amp;T-only cells + BL-only cells) / all cells covered by either map × 100. Only cells within Bird Conservation Regions (BCR) are included.
+
+Breeding — S&amp;T breeding abundance raster vs BL breeding/resident polygon.
+Transition — S&amp;T corridor-only cells (migration minus breeding ∪ nonbreeding) vs BL passage polygon (seasonal=4 only). Blank = BL has no passage polygon for this species.
+Nonbreeding — S&amp;T nonbreeding raster vs BL nonbreeding/resident polygon.">i</i>
+        </div>
         <div class="season-row">
           <div class="season-label">
             <span>Breeding</span><strong id="pct-breeding">—</strong>
@@ -378,14 +390,12 @@
       <div class="section">
         <div class="section-title">
           Cell counts — <span id="season-label-counts">breeding</span>
-          <i class="info-btn" data-tip="H3 hexagonal grid cells (~28 km across) where each dataset shows the species as present.
+          <i class="info-btn" data-tip="H3 hexagonal grid cells (~28 km across) where each dataset shows the species as present. Only cells within BCR polygons are counted.
 
 S&T only — S&T models abundance here; BirdLife has no polygon.
 BirdLife only — BirdLife polygon covers this cell; S&T models no abundance.
-Overlap — both datasets agree the species is present.
-Union — total cells covered by either dataset.
-
-Centroid displacement = great-circle distance between the centres of the S&T range and BL range. Normalised = distance ÷ range radius proxy; &gt;1.0 means the centres are more than one range-width apart.">i</i>
+Overlap — both datasets agree the species is present here.
+Union — total cells covered by either dataset (denominator for nonoverlap %).">i</i>
         </div>
         <div class="counts-grid">
           <div class="count-card st">
@@ -431,7 +441,20 @@ RF rank — species ranked by RF predicted nonoverlap across all 1,320 species i
       </div>
 
       <div class="section">
-        <div class="section-title">Species metadata</div>
+        <div class="section-title">
+          Species metadata
+          <i class="info-btn tip-up" data-tip="BirdLife name / S&amp;T name — scientific names used by each dataset. A name-differs warning appears when they don't match (e.g. a recent split).
+
+BL map updated — year the BirdLife BOTW polygon was last revised. Older maps (pre-2020) may predate substantial eBird data accumulation in the species' range.
+
+Crosswalk — how S&amp;T and BirdLife species were matched:
+  exact_sci = same scientific name
+  lump = BL combines two S&amp;T species into one polygon
+  bl_split_unioned = BL splits a species S&amp;T treats as one; both BL polygons unioned
+  corrected = SISID manually fixed after review
+
+BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T breeding cells, with coverage %. Primary BCR = the one with the most cells.">i</i>
+        </div>
         <div class="chips" id="meta-chips"></div>
         <div style="margin-top:8px;font-size:11px;color:var(--slate)">
           <div>BirdLife name: <em id="bl-sci">—</em></div>

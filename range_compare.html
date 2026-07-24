@@ -300,7 +300,7 @@
   <div id="header-right">
     <div id="season-btns-migratory">
       <button class="season-btn active" data-season="breeding">Breeding</button>
-      <button class="season-btn" data-season="transition">Transition</button>
+      <button class="season-btn" data-season="transition">Migration-only</button>
       <button class="season-btn" data-season="nonbreeding">Nonbreeding</button>
     </div>
     <div id="season-btns-resident" style="display:none">
@@ -359,7 +359,7 @@
 Computed as: (S&amp;T-only cells + BL-only cells) / all cells covered by either map × 100. Only cells within Bird Conservation Regions (BCR) are included.
 
 Breeding — S&amp;T breeding abundance raster vs BL breeding/resident polygon.
-Transition — S&amp;T corridor-only cells (migration minus breeding ∪ nonbreeding) vs BL passage polygon (seasonal=4 only). Blank = BL has no passage polygon for this species.
+Migration-only — S&amp;T corridor-only cells (migration minus breeding ∪ nonbreeding) vs BL passage polygon (seasonal=4 only). Blank = BL has no passage polygon for this species.
 Nonbreeding — S&amp;T nonbreeding raster vs BL nonbreeding/resident polygon.">i</i>
         </div>
         <div class="season-row">
@@ -370,7 +370,7 @@ Nonbreeding — S&amp;T nonbreeding raster vs BL nonbreeding/resident polygon.">
         </div>
         <div class="season-row">
           <div class="season-label">
-            <span>Transition</span><strong id="pct-transition">—</strong>
+            <span>Migration-only</span><strong id="pct-transition">—</strong>
           </div>
           <div class="bar-track"><div class="bar-fill" id="bar-transition" style="width:0%"></div></div>
         </div>
@@ -617,12 +617,13 @@ BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T
     </div>
 
     <p style="font-size:12px;line-height:1.55;color:#4a5f72;margin-bottom:8px">
-      <strong>Normalised</strong> = distance ÷ (√union_cells × 14 km)</p>
+      <strong>Normalised</strong> = distance ÷ (RMS distance of union cells from the union centroid)</p>
     <p style="font-size:12px;line-height:1.55;color:#4a5f72;margin-bottom:8px">
-      <em>Why this formula?</em> Each H3 res-5 cell has a diameter of ~28 km, so a radius of
-      ~14 km. If you imagine the union of all cells as a single circle, its radius would be
-      approximately √n_union_cells × 14 km — the "range radius" proxy. Dividing the raw
-      distance by this gives a <strong>scale-free ratio</strong>:</p>
+      <em>Why this formula?</em> The divisor is the root-mean-square distance of every union
+      cell from the range's centre — an empirical measure of how spread out the range actually
+      is. This handles disjunct and elongated ranges correctly, where a simple
+      √n_union_cells × 14 km circle would badly understate the true spread and inflate the
+      ratio. Dividing the raw distance by this gives a <strong>scale-free ratio</strong>:</p>
     <ul style="font-size:12px;line-height:1.6;color:#4a5f72;margin:0 0 8px 16px">
       <li><strong>≈ 0</strong> — disagreement is at the range boundary (marginal)</li>
       <li><strong>≈ 1</strong> — disagreement centroids are one range-radius apart</li>
@@ -1129,16 +1130,30 @@ function updateCounts(data, season) {
     document.getElementById('val-dnorm').textContent = '—';
     return;
   }
-  document.getElementById('cnt-st').textContent = (s.st_cells   || 0).toLocaleString();
-  document.getElementById('cnt-bl').textContent = (s.bl_cells   || 0).toLocaleString();
-  document.getElementById('cnt-ov').textContent = (s.overlap_cells || 0).toLocaleString();
+  // Exclusive counts: prefer explicit scalar fields, then the cell arrays used by
+  // the map layers, then fall back to (total − overlap). The boxes are labelled
+  // "S&T only" / "BirdLife only", so they must show exclusive cells, not layer totals.
+  const ov = s.overlap_cells || 0;
+  const stOnly = (s.st_only_cells != null) ? s.st_only_cells
+               : Array.isArray(s.st_only) ? s.st_only.length
+               : Math.max((s.st_cells || 0) - ov, 0);
+  const blOnly = (s.bl_only_cells != null) ? s.bl_only_cells
+               : Array.isArray(s.bl_only) ? s.bl_only.length
+               : Math.max((s.bl_cells || 0) - ov, 0);
+  document.getElementById('cnt-st').textContent = stOnly.toLocaleString();
+  document.getElementById('cnt-bl').textContent = blOnly.toLocaleString();
+  document.getElementById('cnt-ov').textContent = ov.toLocaleString();
   document.getElementById('cnt-un').textContent = (s.union_cells || 0).toLocaleString();
   document.getElementById('val-ddist').textContent =
     s.disagreement_dist_km != null
       ? `${Math.round(s.disagreement_dist_km).toLocaleString()} km` : '—';
+  // Prefer the RMS-spread normalizer (norm_displacement_rms); the old
+  // √union_cells × 14 km normalizer over-inflated sparse/elongated ranges.
+  const dnorm = (s.norm_displacement_rms != null) ? s.norm_displacement_rms
+              : (s.norm_disagreement_dist != null) ? s.norm_disagreement_dist
+              : null;
   document.getElementById('val-dnorm').textContent =
-    s.norm_disagreement_dist != null
-      ? s.norm_disagreement_dist.toFixed(2) : '—';
+    dnorm != null ? dnorm.toFixed(2) : '—';
   // Refresh centroid layer if active
   if (ddistLayerOn) updateDdistLayer(data, season);
 }

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -275,6 +276,15 @@
     padding: 16px 24px; font-size: 13px; color: var(--navy);
     box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: none;
   }
+
+  /* ── PNG download button ─────────────────────────────────────────────── */
+  #png-btn {
+    padding: 5px 12px; border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.4);
+    background: transparent; color: white; cursor: pointer; font-size: 12px;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #png-btn:hover { background: rgba(255,255,255,0.15); }
+  #png-btn:disabled { opacity: 0.45; cursor: wait; }
 </style>
 </head>
 <body>
@@ -306,6 +316,7 @@
     <div id="season-btns-resident" style="display:none">
       <button class="season-btn active" data-season="breeding">Year-round</button>
     </div>
+    <button id="png-btn" title="Download current map as PNG">&#8595; PNG</button>
   </div>
 </div>
 
@@ -1270,6 +1281,48 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const a    = document.createElement('a');
   a.href = url; a.download = 'bl_st_review.csv'; a.click();
   URL.revokeObjectURL(url);
+});
+
+// ── PNG export ────────────────────────────────────────────────────────────────
+document.getElementById('png-btn').addEventListener('click', async () => {
+  if (!currentData) { alert('Load a species first.'); return; }
+
+  const btn = document.getElementById('png-btn');
+  btn.disabled = true;
+  btn.textContent = 'Capturing…';
+
+  // Wait one animation frame so Leaflet finishes any pending canvas draw
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  try {
+    const mapEl = document.getElementById('map');
+    const canvas = await html2canvas(mapEl, {
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      scale: 2,                 // 2× for sharper output
+      backgroundColor: '#f4f6f8'
+    });
+
+    const season = currentSeason;
+    const code   = currentData.code;
+    const filename = `${code}_${season}.png`;
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  } catch (err) {
+    alert('PNG export failed: ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↓ PNG';
+  }
 });
 </script>
 </body>

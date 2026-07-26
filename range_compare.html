@@ -774,12 +774,14 @@ function updateDdistLayer(data, season) {
     layers.push(L.marker([midLat, midLng], {
       icon: L.divIcon({
         className: '',
-        html: `<div style="background:rgba(255,255,255,0.85);border:1px solid #aaa;
-                           border-radius:4px;padding:2px 5px;font-size:10px;
-                           color:#444;white-space:nowrap;font-family:Calibri,sans-serif">
+        html: `<div style="background:rgba(255,255,255,0.92);border:1px solid #999;
+                           border-radius:4px;padding:3px 7px;font-size:11px;font-weight:600;
+                           color:#333;white-space:nowrap;font-family:Calibri,sans-serif;
+                           box-shadow:0 1px 4px rgba(0,0,0,0.18);transform:translate(-50%,-50%)">
                  ${Math.round(distKm).toLocaleString()} km
                </div>`,
-        iconAnchor: [30, 10]
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
       })
     }));
   }
@@ -1304,9 +1306,11 @@ document.getElementById('png-btn').addEventListener('click', async () => {
       backgroundColor: '#f4f6f8'
     });
 
-    const season = currentSeason;
     const code   = currentData.code;
-    const filename = `${code}_${season}.png`;
+    const seasonLabel = currentData.is_resident ? 'yearround'
+                      : currentSeason === 'transition' ? 'migration'
+                      : currentSeason;
+    const filename = `${code}_${seasonLabel}.png`;
 
     canvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);

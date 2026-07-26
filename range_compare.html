@@ -277,6 +277,15 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: none;
   }
 
+  /* ── Centroid distance label ─────────────────────────────────────────── */
+  .ddist-label {
+    background: rgba(255,255,255,0.92); border: 1px solid #999;
+    border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 600;
+    color: #333; white-space: nowrap; font-family: Calibri, sans-serif;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .ddist-label::before { display: none; }
+
   /* ── PNG download button ─────────────────────────────────────────────── */
   #png-btn {
     padding: 5px 12px; border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.4);
@@ -771,19 +780,11 @@ function updateDdistLayer(data, season) {
   const midLng = (stc[1] + blc[1]) / 2;
   const distKm = s.disagreement_dist_km;
   if (distKm != null) {
-    layers.push(L.marker([midLat, midLng], {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="background:rgba(255,255,255,0.92);border:1px solid #999;
-                           border-radius:4px;padding:3px 7px;font-size:11px;font-weight:600;
-                           color:#333;white-space:nowrap;font-family:Calibri,sans-serif;
-                           box-shadow:0 1px 4px rgba(0,0,0,0.18);transform:translate(-50%,-50%)">
-                 ${Math.round(distKm).toLocaleString()} km
-               </div>`,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0]
-      })
-    }));
+    const label = L.marker([midLat, midLng], { icon: L.divIcon({ className: '', iconSize: [0,0] }) });
+    label.bindTooltip(`${Math.round(distKm).toLocaleString()} km`, {
+      permanent: true, direction: 'center', className: 'ddist-label'
+    });
+    layers.push(label);
   }
 
   // S&T-only centroid marker (orange)

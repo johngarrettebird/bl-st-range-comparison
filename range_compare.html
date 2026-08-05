@@ -308,7 +308,7 @@
     #nav-wrap { order: 3; }
     #header-right { order: 4; margin-left: auto; flex-wrap: wrap; gap: 4px; }
     #season-btns-migratory,
-    #season-btns-resident { display: flex !important; flex-wrap: wrap; gap: 4px; }
+    #season-btns-resident { display: flex; flex-wrap: wrap; gap: 4px; }
     .season-btn { font-size: 11px; padding: 4px 8px; }
     .nav-adj-name { display: none; }
     #nav-label { min-width: 44px; }
@@ -568,16 +568,21 @@ BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T
     <div id="cell-tip"></div>
     <button id="zoom-out-btn" title="Reset zoom to fit species range">⤢</button>
     <div id="view-control">
-      <div class="leg-title">Map legend</div>
-      <div class="leg-row"><div class="leg-box" style="background:#2a9d5c"></div>Overlap</div>
-      <div class="leg-row"><div class="leg-box" style="background:#c06a10"></div>S&amp;T only</div>
-      <div class="leg-row"><div class="leg-box" style="background:#1a3a5c"></div>BirdLife only</div>
-      <hr class="view-sep">
-      <div class="leg-title">Show layers</div>
-      <div class="view-btn-group">
-        <button class="view-btn active" data-view="both">S&amp;T + BirdLife + Overlap</button>
-        <button class="view-btn" data-view="st">S&amp;T + Overlap</button>
-        <button class="view-btn" data-view="bl">BirdLife + Overlap</button>
+      <div class="leg-title" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" id="legend-toggle-row">
+        Map legend
+        <span id="legend-toggle-icon" style="font-size:10px;color:var(--slate);margin-left:6px;">▲</span>
+      </div>
+      <div id="legend-body">
+        <div class="leg-row"><div class="leg-box" style="background:#2a9d5c"></div>Overlap</div>
+        <div class="leg-row"><div class="leg-box" style="background:#c06a10"></div>S&amp;T only</div>
+        <div class="leg-row"><div class="leg-box" style="background:#1a3a5c"></div>BirdLife only</div>
+        <hr class="view-sep">
+        <div class="leg-title">Show layers</div>
+        <div class="view-btn-group">
+          <button class="view-btn active" data-view="both">S&amp;T + BirdLife + Overlap</button>
+          <button class="view-btn" data-view="st">S&amp;T + Overlap</button>
+          <button class="view-btn" data-view="bl">BirdLife + Overlap</button>
+        </div>
       </div>
     </div>
     <div id="loading">Loading…</div>
@@ -1330,6 +1335,15 @@ document.getElementById('export-btn').addEventListener('click', () => {
   const a    = document.createElement('a');
   a.href = url; a.download = 'bl_st_review.csv'; a.click();
   URL.revokeObjectURL(url);
+});
+
+// ── Legend collapse toggle ────────────────────────────────────────────────────
+document.getElementById('legend-toggle-row').addEventListener('click', () => {
+  const body = document.getElementById('legend-body');
+  const icon = document.getElementById('legend-toggle-icon');
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  icon.textContent = collapsed ? '▲' : '▼';
 });
 
 // ── PNG export ────────────────────────────────────────────────────────────────

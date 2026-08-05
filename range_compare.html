@@ -294,6 +294,47 @@
   }
   #png-btn:hover { background: rgba(255,255,255,0.15); }
   #png-btn:disabled { opacity: 0.45; cursor: wait; }
+
+  /* ── Mobile ───────────────────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    body { overflow-y: auto; }
+
+    #header {
+      height: auto; flex-wrap: wrap;
+      padding: 6px 10px; row-gap: 5px;
+    }
+    #header h1 { order: 1; font-size: 12px; white-space: normal; line-height: 1.3; flex-shrink: 1; }
+    #search-wrap { order: 2; flex: 1; max-width: none; }
+    #nav-wrap { order: 3; }
+    #header-right { order: 4; margin-left: auto; flex-wrap: wrap; gap: 4px; }
+    #season-btns-migratory,
+    #season-btns-resident { display: flex !important; flex-wrap: wrap; gap: 4px; }
+    .season-btn { font-size: 11px; padding: 4px 8px; }
+    .nav-adj-name { display: none; }
+    #nav-label { min-width: 44px; }
+    #png-btn { display: none; }
+
+    #main { flex-direction: column; overflow: visible; }
+
+    #map-wrap { height: 50vh; flex: none !important; width: 100%; }
+    #map { height: 100%; }
+
+    #sidebar {
+      width: 100%; border-right: none;
+      border-top: 1px solid var(--lgray); overflow-y: visible;
+    }
+
+    #view-control {
+      top: 8px; right: 8px; bottom: auto;
+      padding: 7px 10px; max-width: 155px;
+    }
+    #view-control .leg-title { font-size: 10px; margin-bottom: 6px; }
+    .view-btn { font-size: 10px; padding: 4px 6px; white-space: normal; line-height: 1.3; }
+
+    #zoom-out-btn { top: 70px; }
+    #cell-tip { display: none !important; }
+    #ddist-modal > div { padding: 16px 18px; }
+  }
 </style>
 </head>
 <body>
@@ -522,7 +563,7 @@ BCRs — all Bird Conservation Regions containing ≥5% of this species' S&amp;T
   </div><!-- /sidebar -->
 
   <!-- Map -->
-  <div style="position:relative;flex:1;">
+  <div id="map-wrap" style="position:relative;flex:1;">
     <div id="map"></div>
     <div id="cell-tip"></div>
     <button id="zoom-out-btn" title="Reset zoom to fit species range">⤢</button>
@@ -671,13 +712,18 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 // Fix: map fills its container
-document.getElementById('map').style.height =
-  (document.getElementById('main').offsetHeight) + 'px';
-window.addEventListener('resize', () => {
-  document.getElementById('map').style.height =
-    (document.getElementById('main').offsetHeight) + 'px';
+function setMapHeight() {
+  const isMobile = window.innerWidth <= 768;
+  const mapEl = document.getElementById('map');
+  if (isMobile) {
+    mapEl.style.height = '100%';
+  } else {
+    mapEl.style.height = document.getElementById('main').offsetHeight + 'px';
+  }
   map.invalidateSize();
-});
+}
+setMapHeight();
+window.addEventListener('resize', setMapHeight);
 setTimeout(() => map.invalidateSize(), 100);
 
 // ── H3 helpers ────────────────────────────────────────────────────────────────
